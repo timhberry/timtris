@@ -1,19 +1,22 @@
 package com.adventuretron.timtris;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.TimeUtils;
 
-public class GameScreen implements Screen {
+public class GameScreen implements Screen, InputProcessor {
 
     final TimtrisGame game;
     int field[][] = new int[10][16];
+    private Color[] shapeColors;
 
     boolean gameRunning = true;
     Timtromino currentPiece;
+    Timtromino rotatedPiece;
     int curX = 4;
     int curY = 13;
 
@@ -27,11 +30,25 @@ public class GameScreen implements Screen {
     private ShapeRenderer shapeRenderer;
 
     public GameScreen(TimtrisGame game) {
-        gameTime = TimeUtils.millis();
         gameTick = 1000;
         this.game = game;
         shapeRenderer = new ShapeRenderer();
+        Gdx.input.setInputProcessor(this);
+        shapeColors = new Color[8];
+        setupColors();
         init();
+    }
+
+    private void setupColors() {
+        // note to self; read up on arrays
+        shapeColors[0] = Color.DARK_GRAY;
+        shapeColors[1] = Color.CYAN;
+        shapeColors[2] = Color.RED;
+        shapeColors[3] = Color.YELLOW;
+        shapeColors[4] = Color.GREEN;
+        shapeColors[5] = Color.BLUE;
+        shapeColors[6] = Color.PURPLE;
+        shapeColors[7] = Color.GOLD;
     }
 
     private void init() {
@@ -44,6 +61,7 @@ public class GameScreen implements Screen {
         // Set the first Timtomino to drop
         currentPiece = new Timtromino();
         // Set the game time
+        gameTime = TimeUtils.millis();
 
     }
 
@@ -53,10 +71,14 @@ public class GameScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
+        // TODO - Render the next Timtromino
+        // TODO - Render game state, score & high score
+        // TODO - Pause button
+
         // draw the field
-        shapeRenderer.setColor(Color.DARK_GRAY);
         for (int y = 0; y < 16; y++) {
             for (int x = 0; x < 10; x++) {
+                shapeRenderer.setColor(shapeColors[field[x][y]]);
                 shapeRenderer.rect(x * T_WIDTH + T_XOFFSET, y * T_WIDTH + T_YOFFSET, T_WIDTH, T_WIDTH);
             }
         }
@@ -84,24 +106,153 @@ public class GameScreen implements Screen {
     }
 
     private void gameLogic() {
-        for (int i = 0; i < 4; ++i) {
-            Gdx.app.log("Timtronimo", "Part " + i + " at X:" + (curX + currentPiece.x(i)) + "Y:" + (curY + currentPiece.y(i)));
-        }
-        curY = curY - 1;
+        gameTick = gameTick - 1;
+        tryDrop();
     }
 
     private void tryDrop() {
+        Gdx.app.log("Move", "Trying to drop");
+        boolean blocked = false;
+        for (int i = 0; i < 4; ++i) {
+            if (collisionAt(curX + currentPiece.x(i), curY - 1 + currentPiece.y(i))) {
+                blocked = true;
+            }
+        }
+        if (blocked) {
+            // something's blocking us! our piece becomes part of the field
+            for (int i = 0; i < 4; ++i) {
+                field[curX + currentPiece.x(i)][curY + currentPiece.y(i)] = currentPiece.getColorIndex();
+            }
+            // TODO - Check if there's no more room for new pieces! Game Over!
+
+            // and we get a new piece!
+
+            curX = 4;
+            curY = 13;
+            currentPiece = new Timtromino();
+
+            // TODO - Also check for completed rows on the field!
+
+        } else {
+            // everything's cool, drop it like it's hot
+            curY = curY - 1;
+        }
+
 
     }
 
-    private void tryRotateLeft() {
+    private void tryMoveLeft() {
+        Gdx.app.log("Move", "Trying to move left");
+        boolean blocked = false;
+        for (int i = 0; i < 4; ++i) {
+            if (collisionAt(curX - 1 + currentPiece.x(i), curY + currentPiece.y(i))) {
+                blocked = true;
+            }
+        }
+        if (!blocked) {
+            curX = curX - 1;
+        }
+    }
 
+    private void tryMoveRight() {
+        Gdx.app.log("Move", "Trying to move right");
+        boolean blocked = false;
+        for (int i = 0; i < 4; ++i) {
+            if (collisionAt(curX + 1 + currentPiece.x(i), curY + currentPiece.y(i))) {
+                blocked = true;
+            }
+        }
+        if (!blocked) {
+            curX = curX + 1;
+        }
     }
 
     private void tryRotateRight() {
-
+        Gdx.app.log("Move", "Trying to rotate right");
+        boolean blocked = false;
+        rotatedPiece = currentPiece.rotateRight();
+        for (int i = 0; i < 4; ++i) {
+            if (collisionAt(curX + rotatedPiece.x(i), curY + rotatedPiece.y(i))) {
+                blocked = true;
+            }
+        }
+        if (!blocked) {
+            currentPiece = rotatedPiece;
+        }
     }
 
+    private boolean collisionAt(int x, int y) {
+        if (x < 0 | x > 9) {
+            Gdx.app.log("Collision Check", "Checking x:" + x + " y:" + y + " BANG");
+            return true;
+        }
+        if (y < 0 | y > 15) {
+            Gdx.app.log("Collision Check", "Checking x:" + x + " y:" + y + " BANG");
+            return true;
+        }
+        if (field[x][y] != 0) {
+            Gdx.app.log("Collision Check", "Checking x:" + x + " y:" + y + " BANG");
+            return true;
+        }
+        Gdx.app.log("Collision Check", "Checking x:" + x + " y:" + y + " Clear");
+        return false;
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        return false;
+    }
+
+    @Override
+    public boolean keyUp(int keycode) {
+        return false;
+    }
+
+    public boolean keyTyped (char character) {
+        Gdx.app.log("KeyTyped", "Key:" + character);
+        switch (character) {
+            case 'a':
+                tryMoveLeft();
+                break;
+            case 'd':
+                tryMoveRight();
+                break;
+            case 's':
+                tryDrop();
+                break;
+            case 'w':
+                tryRotateRight();
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDragged(int screenX, int screenY, int pointer) {
+        return false;
+    }
+
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) {
+        return false;
+    }
+
+    @Override
+    public boolean scrolled(int amount) {
+        return false;
+    }
 
     @Override
     public void show() {

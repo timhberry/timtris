@@ -9,7 +9,6 @@ import java.util.Random;
 public class Timtromino {
 
     enum Shapes { NoShape, ZShape, SShape, LineShape, TShape, SquareShape, LShape, MirroredLShape };
-    Array<Color> Colors[];
 
     private Color[] shapeColors;
     private Shapes pieceShape;
@@ -81,6 +80,8 @@ public class Timtromino {
     public Color getColor() {
         return shapeColors[pieceShape.ordinal()];
     }
+
+    public int getColorIndex() { return pieceShape.ordinal(); }
 
     public void setRandomShape()
     {
