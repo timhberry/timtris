@@ -3,6 +3,7 @@ package com.adventuretron.timtris;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -18,10 +19,14 @@ public class GameScreen implements Screen, InputProcessor {
     Timtromino currentPiece;
     Timtromino rotatedPiece;
     int curX = 4;
-    int curY = 13;
+    int curY = 14;
 
     long gameTime;
     long gameTick;
+
+    Sound blipSound = Gdx.audio.newSound(Gdx.files.internal("blip.wav"));
+    Sound gameOverSound = Gdx.audio.newSound(Gdx.files.internal("gameover.wav"));
+    Sound lineClearSound = Gdx.audio.newSound(Gdx.files.internal("lineclear.wav"));
 
     private final int T_WIDTH = 25;
     private final int T_XOFFSET = 50;
@@ -93,6 +98,12 @@ public class GameScreen implements Screen, InputProcessor {
             }
         }
 
+        // draw over any bits sticking out at the top
+        for (int x = 0; x < 10; x++) {
+            shapeRenderer.setColor(Color.GRAY);
+            shapeRenderer.rect(x * T_WIDTH + T_XOFFSET, 16 * T_WIDTH + T_YOFFSET, T_WIDTH, T_WIDTH);
+        }
+
         shapeRenderer.end();
 
         // game logic, such as it is
@@ -106,7 +117,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     private void gameLogic() {
-        gameTick = gameTick - 1;
+        gameTick = gameTick - 2;
         tryDrop();
     }
 
@@ -123,22 +134,62 @@ public class GameScreen implements Screen, InputProcessor {
             for (int i = 0; i < 4; ++i) {
                 field[curX + currentPiece.x(i)][curY + currentPiece.y(i)] = currentPiece.getColorIndex();
             }
-            // TODO - Check if there's no more room for new pieces! Game Over!
-
             // and we get a new piece!
-
             curX = 4;
-            curY = 13;
+            curY = 14;
             currentPiece = new Timtromino();
-
-            // TODO - Also check for completed rows on the field!
+            // check to see if it has anywhere to go, otherwise it's game over dude
+            boolean newpieceBlocked = false;
+            for (int i = 0; i < 4; ++i) {
+                if (collisionAt(curX + currentPiece.x(i), curY - 1 + currentPiece.y(i))) {
+                    newpieceBlocked = true;
+                }
+            }
+            if (newpieceBlocked) {
+                gameRunning = false;
+                gameOverSound.play();
+            }
+            checkRows();
 
         } else {
             // everything's cool, drop it like it's hot
             curY = curY - 1;
+            blipSound.play();
         }
 
 
+    }
+
+    private void checkRows() {
+        for (int a = 0; a < 16; a++) {
+            boolean rowComplete = true;
+            for (int b = 0; b < 10; b++) {
+                if (field[b][a] == 0) {
+                    rowComplete = false;
+                }
+            }
+            if (rowComplete) {
+                // row a is complete!
+                Gdx.app.log("CHECK", "Row " + a + " is complete!");
+                int newfield[][] = new int[10][16];
+                for (int newa = 0; newa < a; newa++) {
+                    for (int newb = 0; newb < 10; newb++) {
+                        newfield[newb][newa] = field[newb][newa];
+                    }
+                }
+                for (int newa = a; newa < 15; newa++) {
+                    for (int newb = 0; newb < 10; newb++) {
+                        newfield[newb][newa] = field[newb][newa+1];
+                    }
+                }
+                // blank top row
+                for (int foo = 0; foo < 10; foo++) {
+                    newfield[foo][15] = 0;
+                }
+                field = newfield;
+                lineClearSound.play();
+            }
+        }
     }
 
     private void tryMoveLeft() {
