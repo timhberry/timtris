@@ -87,9 +87,8 @@ public class GameScreen implements Screen, InputProcessor {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        // TODO - Render the next Timtromino
-        // TODO - Render game state, score & high score
-        // TODO - Pause button
+        // TODO - Pause button, game state
+        // TODO - Persistent high score
 
         // draw the field
         for (int y = 0; y < 16; y++) {
@@ -235,12 +234,11 @@ public class GameScreen implements Screen, InputProcessor {
                 field = newfield;
                 lineClearSound.play();
                 rowsCleared++;
-                // check the new field from the start again
                 a = 0;
             }
         }
         if (rowsCleared > 0) {
-            gameTick = gameTick - 2;
+            gameTick = gameTick - 5;
             rowsCleared = (rowsCleared * rowsCleared) * 10;
             score = score + rowsCleared;
         }
