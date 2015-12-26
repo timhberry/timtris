@@ -19,6 +19,7 @@ public class GameScreen implements Screen, InputProcessor {
 
     boolean gameRunning = true;
     Timtromino currentPiece;
+    Timtromino nextPiece;
     Timtromino rotatedPiece;
     int curX = 4;
     int curY = 14;
@@ -27,6 +28,7 @@ public class GameScreen implements Screen, InputProcessor {
     long gameTick;
 
     int score;
+    int highScore;
 
     Sound blipSound = Gdx.audio.newSound(Gdx.files.internal("blip.wav"));
     Sound gameOverSound = Gdx.audio.newSound(Gdx.files.internal("gameover.wav"));
@@ -73,6 +75,7 @@ public class GameScreen implements Screen, InputProcessor {
         }
         // Set the first Timtomino to drop
         currentPiece = new Timtromino();
+        nextPiece = new Timtromino();
         // Set the game time
         gameTime = TimeUtils.millis();
         score = 0;
@@ -112,11 +115,40 @@ public class GameScreen implements Screen, InputProcessor {
             shapeRenderer.rect(x * T_WIDTH + T_XOFFSET, 16 * T_WIDTH + T_YOFFSET, T_WIDTH, T_WIDTH);
         }
 
+        // draw the next shape coming
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                shapeRenderer.setColor(Color.DARK_GRAY);
+                shapeRenderer.rect(x * T_WIDTH + T_XOFFSET + (T_WIDTH * 12), y * T_WIDTH + T_YOFFSET + (T_WIDTH * 10), T_WIDTH, T_WIDTH);
+            }
+        }
+        if (nextPiece.getShape() != Timtromino.Shapes.NoShape) {
+            for (int i = 0; i < 4; ++i) {
+                int x = 14 + nextPiece.x(i);
+                int y = 12 + nextPiece.y(i);
+                shapeRenderer.setColor(nextPiece.getColor());
+                shapeRenderer.rect(x * T_WIDTH + T_XOFFSET, y * T_WIDTH + T_YOFFSET, T_WIDTH, T_WIDTH);
+            }
+        }
+
+        // draw score boxes
+        for (int x = 0; x < 5; x++) {
+            shapeRenderer.setColor(Color.DARK_GRAY);
+            shapeRenderer.rect(x * T_WIDTH + T_XOFFSET + (T_WIDTH * 12), T_WIDTH + T_YOFFSET + (T_WIDTH * 6), T_WIDTH, T_WIDTH);
+            shapeRenderer.rect(x * T_WIDTH + T_XOFFSET + (T_WIDTH * 12), T_WIDTH + T_YOFFSET + (T_WIDTH * 5), T_WIDTH, T_WIDTH);
+            shapeRenderer.rect(x * T_WIDTH + T_XOFFSET + (T_WIDTH * 12), T_WIDTH + T_YOFFSET + (T_WIDTH * 2), T_WIDTH, T_WIDTH);
+            shapeRenderer.rect(x * T_WIDTH + T_XOFFSET + (T_WIDTH * 12), T_WIDTH + T_YOFFSET + (T_WIDTH * 1), T_WIDTH, T_WIDTH);
+        }
+
         shapeRenderer.end();
 
         batch.begin();
         font.setColor(Color.WHITE);
         font.draw(batch, "NEXT PIECE", 12 * T_WIDTH + T_XOFFSET, 16 * T_WIDTH + T_YOFFSET);
+        font.draw(batch, "HIGH SCORE", 12 * T_WIDTH + T_XOFFSET, 9 * T_WIDTH + T_YOFFSET);
+        font.draw(batch, "SCORE", 12 * T_WIDTH + T_XOFFSET, 5 * T_WIDTH + T_YOFFSET);
+        font.draw(batch, "" + score, 13 * T_WIDTH + T_XOFFSET, 3 * T_WIDTH + T_YOFFSET);
+        font.draw(batch, "" + highScore, 13 * T_WIDTH + T_XOFFSET, 7 * T_WIDTH + T_YOFFSET);
         batch.end();
 
         // game logic, such as it is
@@ -149,7 +181,8 @@ public class GameScreen implements Screen, InputProcessor {
             // and we get a new piece!
             curX = 4;
             curY = 14;
-            currentPiece = new Timtromino();
+            currentPiece = nextPiece;
+            nextPiece = new Timtromino();
             // check to see if it has anywhere to go, otherwise it's game over dude
             boolean newpieceBlocked = false;
             for (int i = 0; i < 4; ++i) {
