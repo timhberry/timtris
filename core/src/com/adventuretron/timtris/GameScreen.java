@@ -6,6 +6,8 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.TimeUtils;
 
@@ -24,6 +26,8 @@ public class GameScreen implements Screen, InputProcessor {
     long gameTime;
     long gameTick;
 
+    int score;
+
     Sound blipSound = Gdx.audio.newSound(Gdx.files.internal("blip.wav"));
     Sound gameOverSound = Gdx.audio.newSound(Gdx.files.internal("gameover.wav"));
     Sound lineClearSound = Gdx.audio.newSound(Gdx.files.internal("lineclear.wav"));
@@ -33,11 +37,15 @@ public class GameScreen implements Screen, InputProcessor {
     private final int T_YOFFSET = 45;
 
     private ShapeRenderer shapeRenderer;
+    private SpriteBatch batch;
+    private BitmapFont font;
 
     public GameScreen(TimtrisGame game) {
         gameTick = 1000;
         this.game = game;
         shapeRenderer = new ShapeRenderer();
+        font = new BitmapFont();
+        batch = new SpriteBatch();
         Gdx.input.setInputProcessor(this);
         shapeColors = new Color[8];
         setupColors();
@@ -67,7 +75,7 @@ public class GameScreen implements Screen, InputProcessor {
         currentPiece = new Timtromino();
         // Set the game time
         gameTime = TimeUtils.millis();
-
+        score = 0;
     }
 
     @Override
@@ -106,6 +114,11 @@ public class GameScreen implements Screen, InputProcessor {
 
         shapeRenderer.end();
 
+        batch.begin();
+        font.setColor(Color.WHITE);
+        font.draw(batch, "NEXT PIECE", 12 * T_WIDTH + T_XOFFSET, 16 * T_WIDTH + T_YOFFSET);
+        batch.end();
+
         // game logic, such as it is
         if (gameRunning) {
             if (TimeUtils.timeSinceMillis(gameTime) > gameTick) {
@@ -117,7 +130,6 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     private void gameLogic() {
-        gameTick = gameTick - 2;
         tryDrop();
     }
 
@@ -161,6 +173,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     private void checkRows() {
+        int rowsCleared = 0;
         for (int a = 0; a < 16; a++) {
             boolean rowComplete = true;
             for (int b = 0; b < 10; b++) {
@@ -188,7 +201,15 @@ public class GameScreen implements Screen, InputProcessor {
                 }
                 field = newfield;
                 lineClearSound.play();
+                rowsCleared++;
+                // check the new field from the start again
+                a = 0;
             }
+        }
+        if (rowsCleared > 0) {
+            gameTick = gameTick - 2;
+            rowsCleared = (rowsCleared * rowsCleared) * 10;
+            score = score + rowsCleared;
         }
     }
 
